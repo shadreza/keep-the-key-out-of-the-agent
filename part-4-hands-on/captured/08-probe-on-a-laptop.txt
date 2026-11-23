@@ -1,0 +1,14 @@
+Your shell holds: sk-ant-stand-in-for-your-real-key
+The project's .env holds a fake canary key.
+
+== box run probe-open.toml
+1. ANTHROPIC_API_KEY inside the box: sk-ant-f5856750f730cf325b377b945d4ec96ab8f6c5317c2fafb4423026c07db62ab1
+2. .env in the project: readable: ANTHROPIC_API_KEY=sk-ant-fake-canary-not-a-real-key
+3. write hello.txt in the project: ok
+4. write ~/outside-the-box.txt: refused
+
+== box run probe-deny.toml
+1. ANTHROPIC_API_KEY inside the box: sk-ant-59ed1ca18aceac041e2d0c284ac02d7158d07ba10c982d697b55385736253fcd
+2. .env in the project: nothing could be read
+3. write hello.txt in the project: ok
+4. write ~/outside-the-box.txt: refused

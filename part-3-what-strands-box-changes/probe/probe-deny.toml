@@ -1,0 +1,22 @@
+# The same probe as probe-open.toml, with one change at the end: the profile
+# keeps the project's .env away from everything in the box. Run it with
+# run-probe.sh.
+packs = ["@box/anthropic"]
+
+[profile]
+name = "probe-deny"
+
+[project]
+access = "write"
+
+[agent]
+command = ["/bin/sh", "-c", """
+echo "1. ANTHROPIC_API_KEY inside the box: $ANTHROPIC_API_KEY"
+if IFS= read -r line < .env && [ -n "$line" ]; then echo "2. .env in the project: readable: $line"; else echo "2. .env in the project: nothing could be read"; fi
+echo hi > hello.txt && echo "3. write hello.txt in the project: ok" || echo "3. write hello.txt in the project: refused"
+echo hi > "$HOME/outside-the-box.txt" 2>/dev/null && echo "4. write ~/outside-the-box.txt: ok" || echo "4. write ~/outside-the-box.txt: refused"
+"""]
+
+# The one difference from probe-open.toml.
+[filesystem]
+deny = [{ path = "${{ workspace }}/.env", optional = true }]

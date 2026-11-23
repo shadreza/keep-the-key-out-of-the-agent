@@ -1,0 +1,13 @@
+Downloading box-cli-v0.3.0-x86_64-unknown-linux-gnu.tar.gz...
+Verified checksum and archive
+Installed box 0.3.0.
+Open a new terminal, or run: export PATH="$HOME/.local/bin:$PATH"
+
+box run <profile>       # Start an agent in a box, from your project
+box profile <command>   # Create, show, and remove profiles
+
+Example next steps (Claude Code with Bedrock):
+
+box profile create claude --with bedrock   # Then set its model and sign in to Bedrock
+box run claude                             # Run from your project
+

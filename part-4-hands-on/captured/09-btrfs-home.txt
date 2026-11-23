@@ -1,0 +1,6 @@
+Your shell holds: sk-ant-stand-in-for-your-real-key
+The project's .env holds a fake canary key.
+
+== box run probe-open.toml
+strands-box: error: unsafe box directory ~/.strands/box/r/b-6a0d4a56d9cbe382/box: its first-use contents changed before the record write
+the box didn't start: see part-4-hands-on/known-gaps.md

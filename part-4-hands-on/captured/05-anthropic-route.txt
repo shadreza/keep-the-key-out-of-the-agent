@@ -1,0 +1,8 @@
+[egress.anthropic]
+destinations = ["api.anthropic.com"]
+
+[egress.anthropic.secret]
+header = "x-api-key"
+phantom_prefix = "sk-ant-"
+ref = "env://ANTHROPIC_API_KEY"
+

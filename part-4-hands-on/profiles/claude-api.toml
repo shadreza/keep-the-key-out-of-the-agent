@@ -1,0 +1,20 @@
+# Written by `box profile create claude-api --with claude,anthropic --policy scoped`
+# (box 0.3.0, 2026-11-23). The last two lines are the one change this hands-on makes.
+# Copy to ~/.strands/box/profiles/claude-api/profile.toml, or create the profile
+# with the command above and append the [filesystem] table.
+packs = ["@box/claude", "@box/anthropic", "@box/cargo", "@box/git", "@box/node", "@box/npm", "@box/pnpm", "@box/yarn"]
+policies = ["policy.dw"]
+
+# How much of your project the agent reaches: "none", "read", "write".
+[project]
+access = "write"
+
+[options]
+claude.host = "anthropic"
+claude.import-mcp = "false"
+claude.import-hooks = "false"
+
+# Keep a .env that is still in the project away from every process in the box.
+# optional = true lets the profile run in a project that has no .env (Linux needs it).
+[filesystem]
+deny = [{ path = "${{ workspace }}/.env", optional = true }]

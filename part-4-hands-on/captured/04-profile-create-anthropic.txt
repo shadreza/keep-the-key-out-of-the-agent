@@ -1,0 +1,32 @@
+box: Profile claude-api
+
+Programs
+  ✓ Claude Code         @box/claude
+                        /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+  ✓ git                 @box/git
+                        /usr/bin/git
+  ✓ node                @box/node
+                        /usr/local/bin/node
+  ✓ npm                 @box/npm
+                        /usr/local/bin/npm → /usr/local/lib/node_modules/npm/bin/npm-cli.js
+  ! cargo (@box/cargo)  skipped: cargo is not on PATH
+  ! pnpm (@box/pnpm)    skipped: pnpm is not on PATH
+  ! yarn (@box/yarn)    skipped: it runs /usr/bin/dash, which is the command of no tool table
+
+Policy
+  Scoped (@box/scoped), copied to ~/.strands/box/profiles/claude-api/policy.dw
+
+Files
+  profile    ~/.strands/box/profiles/claude-api/profile.toml
+  policy     ~/.strands/box/profiles/claude-api/policy.dw
+
+✓ Wrote profile claude-api.
+
+Next
+  1. Put the key for api.anthropic.com in ANTHROPIC_API_KEY.
+  2. Start Claude Code in the box, from the project directory:
+     box run claude-api
+     Arguments after -- go to Claude Code: box run claude-api -- <args>
+
+Full configuration: box profile show claude-api --full
+To change it with a coding agent, tell the agent: Run box help agent and follow it to update profile claude-api.

@@ -1,0 +1,6 @@
+# box profile show claude-api --full, run in ~/src/my-app, lines that hold "deny"
+# (box 0.3.0, 2026-11-23; the table each line sits in is added after the arrow)
+80:  deny = ["~/src/my-app/.env", "~/src/my-app/.box"]   <- [agent.filesystem]
+105: deny = ["~/src/my-app/.env", "~/src/my-app/.box"]   <- [tool.git.filesystem]
+123: deny = ["~/src/my-app/.env", "~/src/my-app/.box"]   <- [tool.node.filesystem]
+141: deny = ["~/src/my-app/.env", "~/src/my-app/.box"]   <- [tool.npm.filesystem]

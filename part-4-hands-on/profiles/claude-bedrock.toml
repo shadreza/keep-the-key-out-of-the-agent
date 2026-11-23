@@ -1,0 +1,23 @@
+# Written by `box profile create claude --with claude,bedrock --option bedrock.region=us-east-1 --policy scoped`
+# (box 0.3.0, 2026-11-23). The [agent.env] table is from Box's getting-started page:
+# put the full Bedrock model ID your account can call there. The [filesystem] table is
+# this hands-on's one change.
+packs = ["@box/claude", "@box/bedrock", "@box/cargo", "@box/git", "@box/node", "@box/npm", "@box/pnpm", "@box/yarn"]
+policies = ["policy.dw"]
+
+# How much of your project the agent reaches: "none", "read", "write".
+[project]
+access = "write"
+
+[options]
+claude.host = "bedrock"
+bedrock.sign-in = "aws"
+claude.import-mcp = "false"
+claude.import-hooks = "false"
+bedrock.region = "us-east-1"
+
+[agent.env]
+ANTHROPIC_MODEL = "YOUR-FULL-BEDROCK-MODEL-ID"
+
+[filesystem]
+deny = [{ path = "${{ workspace }}/.env", optional = true }]

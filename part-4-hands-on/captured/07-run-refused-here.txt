@@ -1,0 +1,8 @@
+box: skipped tool cargo (@box/cargo): cargo is not on PATH
+box: skipped tool pnpm (@box/pnpm): pnpm is not on PATH
+box: skipped tool yarn (@box/yarn): it runs /usr/bin/dash, which is the command of no tool table
+box: running profile claude with box ID b-6e9df4e13b170f5d (records: ~/.strands/box/r/b-6e9df4e13b170f5d/records.jsonl)
+box: to reuse this box run: box run claude --box-id b-6e9df4e13b170f5d
+box: policy history: box runs history b-6e9df4e13b170f5d
+strands-box: box b-6e9df4e13b170f5d created · config ~/.strands/box/r/b-6e9df4e13b170f5d/box.toml
+strands-box: error: telemetry setup failed: telemetry configuration: the telemetry port could not be bound: Permission denied (os error 13)

@@ -1,0 +1,18 @@
+# A probe: a plain shell in place of a coding agent, so you can see what a box
+# does without a model, an account or any cost. It reports what it sees and
+# exits. Run it with run-probe.sh, from a throwaway project.
+packs = ["@box/anthropic"]
+
+[profile]
+name = "probe-open"
+
+[project]
+access = "write"
+
+[agent]
+command = ["/bin/sh", "-c", """
+echo "1. ANTHROPIC_API_KEY inside the box: $ANTHROPIC_API_KEY"
+if IFS= read -r line < .env && [ -n "$line" ]; then echo "2. .env in the project: readable: $line"; else echo "2. .env in the project: nothing could be read"; fi
+echo hi > hello.txt && echo "3. write hello.txt in the project: ok" || echo "3. write hello.txt in the project: refused"
+echo hi > "$HOME/outside-the-box.txt" 2>/dev/null && echo "4. write ~/outside-the-box.txt: ok" || echo "4. write ~/outside-the-box.txt: refused"
+"""]

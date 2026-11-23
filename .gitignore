@@ -1,0 +1,9 @@
+# Never commit a real key. Every key in this repo is a fake one, written out in full.
+.env
+.env.*
+*.env
+# The Box installer, downloaded to read before running it. Get a fresh copy each time.
+install.sh
+# What a box leaves in a project folder.
+.box/
+hello.txt
