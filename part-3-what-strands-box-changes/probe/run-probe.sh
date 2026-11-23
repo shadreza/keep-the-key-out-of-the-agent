@@ -22,6 +22,16 @@ trap 'rm -rf "$project"' EXIT
 printf 'ANTHROPIC_API_KEY=sk-ant-fake-canary-not-a-real-key\n' > "$project/.env"
 cd "$project"
 
+# On a btrfs home folder a new box stops once ("first-use contents changed");
+# starting the same box again works (part-4-hands-on/known-gaps.md, gap 5).
+run_box() {
+    box run "$@" --no-banner </dev/null >out.log 2>&1 && return 0
+    grep -q 'first-use contents changed' out.log || return 1
+    again=$(sed -n 's/.*--box-id \(b-[0-9a-f]*\).*/\1/p' out.log | head -n 1)
+    [ -n "$again" ] || return 1
+    box run "$@" --box-id "$again" --no-banner </dev/null >out.log 2>&1
+}
+
 echo "Your shell holds: $ANTHROPIC_API_KEY"
 echo "The project's .env holds a fake canary key."
 for probe in probe-open probe-deny; do
@@ -29,7 +39,7 @@ for probe in probe-open probe-deny; do
     echo "== box run $probe.toml"
     rm -f hello.txt
     # The probe's lines start with a number; box's own lines go to the log.
-    if ! box run "$here/$probe.toml" --no-banner </dev/null >out.log 2>&1; then
+    if ! run_box "$here/$probe.toml"; then
         grep -E 'error' out.log >&2 || tail -n 5 out.log >&2
         echo "the box didn't start: see part-4-hands-on/known-gaps.md" >&2
         exit 1

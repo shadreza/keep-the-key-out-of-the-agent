@@ -45,7 +45,7 @@ Read it line by line:
 3. The project is the agent's to write in.
 4. Your home folder isn't.
 
-If the box doesn't start, see [known gaps](../part-4-hands-on/known-gaps.md). On a laptop whose home folder is on btrfs, it needed `BOX_HOME` on another file system (known gap 5).
+If the box doesn't start, see [known gaps](../part-4-hands-on/known-gaps.md). On a laptop whose home folder is on btrfs, a new box stopped once and ran when started again with its box ID (known gap 5).
 
 ## Box against the plan
 

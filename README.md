@@ -36,10 +36,11 @@ Box is in preview, and v0.3.0 came out on 23 November 2026, the day these steps 
 | What | Where it ran | Result |
 | --- | --- | --- |
 | Install, profiles, the key route, the `.env` deny in the profile | Debian 12, x86_64, box 0.3.0 (23 Nov 2026), and again on an Arch-based Linux laptop, x86_64, box 0.3.0 (24 Nov 2026) | As shown in [`part-4-hands-on/captured/`](part-4-hands-on/captured/) |
-| A box starting, the placeholder key, the `.env` gap and the deny (Part 3's probe) | The Arch-based laptop | Ran, with `BOX_HOME` on a tmpfs folder ([known gap 5](part-4-hands-on/known-gaps.md#5-box-wouldnt-start-with-its-home-on-btrfs)) |
+| A box starting, the placeholder key, the `.env` gap and the deny (Part 3's probe) | The Arch-based laptop | Ran; on the btrfs home folder each new box needed a second start ([known gap 5](part-4-hands-on/known-gaps.md#5-a-new-box-stops-once-when-its-home-is-on-btrfs)) |
 | Four Dogwood rules of your own (a forbid, a no-delete, GET only, a count over ten minutes), with a shell in place of the agent | The Arch-based laptop | Each refused what it should, and the run history named the rule ([`captured/10-policy-probe.txt`](part-4-hands-on/captured/10-policy-probe.txt)) |
 | `find-keys.sh`, `move-env-out.sh`, `after-run-check.sh` | Both machines, on clean and planted test repos | Ran |
-| Claude Code itself talking to a model inside a box | Not yet | Steps 8 to 10 of Part 4 come from Box's docs until then |
+| Claude Code starting in a box, its request going through the key route | The Arch-based laptop, Claude Code 2.1.330 | Started; with a fake key, Anthropic answered `Invalid API key`, so the route reached it ([`captured/11`](part-4-hands-on/captured/11-claude-in-a-box-fake-key.txt)) |
+| Claude Code answering with a real key inside a box | Not yet | Steps 8 to 10 of Part 4 come from Box's docs until then |
 
 If you see something different, open an issue with the command and what it printed. Known differences go in [`part-4-hands-on/known-gaps.md`](part-4-hands-on/known-gaps.md).
 

@@ -1,0 +1,13 @@
+$ box run claude-api --no-banner -- -p "say hi"     # with a fake key in ANTHROPIC_API_KEY
+strands-box: box b-b348198d787dab8d created · config $BOX_HOME/r/b-b348198d787dab8d/box.toml
+strands-box: starting workload
+strands-box: the egress gateway also trusts 118 root certificates from this host's trust store for upstream servers (0 ignored)
+Invalid API key · Fix external API key
+
+$ box runs history <box ID>   (the first lines)
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T21:13:42Z	installed	policy	policy.dw	-	-
+2026-11-23T21:13:43Z	permit	net:connect	api.anthropic.com:443	route_anthropic_connect	-
+2026-11-23T21:13:43Z	permit	net:connect	api.anthropic.com:443	route_anthropic_connect	-
+2026-11-23T21:13:43Z	permit	http:request	api.anthropic.com:443/api/claude_code/policy_limits	route_anthropic_request	-
+2026-11-23T21:13:43Z	permit	http:request	api.anthropic.com:443/api/claude_code/settings	route_anthropic_request	-

@@ -16,7 +16,17 @@ printf 'ANTHROPIC_API_KEY=sk-ant-fake-canary-not-a-real-key\n' > "$project/.env"
 printf 'hello\n' > "$project/notes.txt"
 cd "$project"
 
-if ! box run "$here/policy-probe.toml" --no-banner </dev/null >out.log 2>&1; then
+# On a btrfs home folder a new box stops once ("first-use contents changed");
+# starting the same box again works (part-4-hands-on/known-gaps.md, gap 5).
+run_box() {
+    box run "$@" --no-banner </dev/null >out.log 2>&1 && return 0
+    grep -q 'first-use contents changed' out.log || return 1
+    again=$(sed -n 's/.*--box-id \(b-[0-9a-f]*\).*/\1/p' out.log | head -n 1)
+    [ -n "$again" ] || return 1
+    box run "$@" --box-id "$again" --no-banner </dev/null >out.log 2>&1
+}
+
+if ! run_box "$here/policy-probe.toml"; then
     grep -E 'error' out.log >&2 || tail -n 5 out.log >&2
     echo "the box didn't start: see known-gaps.md" >&2
     exit 1

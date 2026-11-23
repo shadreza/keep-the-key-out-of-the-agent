@@ -12,9 +12,10 @@ cd keep-the-key-out-of-the-agent/part-4-hands-on
 ## What was tested
 
 - **2026-11-23**, box 0.3.0 on Debian GNU/Linux 12 (x86_64, glibc 2.36), git 2.39.5, Claude Code 2.1.325: steps 1 to 7 and step 11. Output in [`captured/`](captured/). The box itself didn't start there ([known gap 3](known-gaps.md#3-the-box-didnt-start-on-the-test-machine)).
-- **2026-11-24**, box 0.3.0 on an Arch-based Linux laptop (x86_64, glibc 2.44), git 2.56.0: steps 1 to 7 again, and a box started with a plain shell in place of Claude Code. The shell saw a placeholder instead of the key, read the `.env` without the deny, and read nothing with it ([`captured/08-probe-on-a-laptop.txt`](captured/08-probe-on-a-laptop.txt), and [Part 3's probe](../part-3-what-strands-box-changes/README.md#try-it-with-no-model) to run it yourself). The box started only with `BOX_HOME` off the btrfs home folder ([known gap 5](known-gaps.md#5-box-wouldnt-start-with-its-home-on-btrfs)).
+- **2026-11-24**, box 0.3.0 on an Arch-based Linux laptop (x86_64, glibc 2.44), git 2.56.0: steps 1 to 7 again, and a box started with a plain shell in place of Claude Code. The shell saw a placeholder instead of the key, read the `.env` without the deny, and read nothing with it ([`captured/08-probe-on-a-laptop.txt`](captured/08-probe-on-a-laptop.txt), and [Part 3's probe](../part-3-what-strands-box-changes/README.md#try-it-with-no-model) to run it yourself). On the btrfs home folder each new box stopped once and ran when started again with its box ID ([known gap 5](known-gaps.md#5-a-new-box-stops-once-when-its-home-is-on-btrfs)).
 - **2026-11-24**, same laptop: step 12's rules, with a shell in place of the agent ([`captured/10-policy-probe.txt`](captured/10-policy-probe.txt)).
-- **Not run yet:** Claude Code talking to a model inside a box (steps 8 to 10). Those steps come from Box's docs. If what you see differs, open an issue.
+- **2026-11-24**, same laptop, Claude Code 2.1.330: Claude Code started in a box, and with a fake key its request reached `api.anthropic.com` through the route, which answered `Invalid API key` ([`captured/11-claude-in-a-box-fake-key.txt`](captured/11-claude-in-a-box-fake-key.txt)). So the route works end to end; only the real key is missing.
+- **Not run yet:** Claude Code answering with a real key inside a box (steps 8 to 10). Those steps come from Box's docs. If what you see differs, open an issue.
 
 Box is in preview, and v0.3.0 came out on 23 November 2026. Check the steps against Box's docs on the day you run them.
 
@@ -91,7 +92,7 @@ printf 'ANTHROPIC_API_KEY=sk-ant-fake-canary-not-a-real-key\n' > .env
 sh scripts/move-env-out.sh ~/src/my-app
 ```
 
-You should see:
+It prints the paths on your machine (here, a home folder of `/home/you`):
 
 ```text
 moved /home/you/src/my-app/.env
@@ -102,6 +103,24 @@ load it in the terminal you run box from:
 
 Now put your **real** key in that file, in place of the fake one. The project no longer holds any key.
 
+Then load it into this terminal. Copy the `set -a` line *your* terminal printed, not the one above, or use `~`:
+
+```sh
+set -a; . ~/.config/agent-secrets/my-app.env; set +a
+```
+
+Box reads the key from this terminal, in step 5 as well as in step 8. Without it, step 5 stops with `credential variable ANTHROPIC_API_KEY is not set` (path A only).
+
+### Check this machine
+
+[`scripts/preflight.sh`](scripts/preflight.sh) checks what tripped people up: `box` on the path, the `claude` that Box will start, the key in this terminal, and the file system Box keeps its boxes on. It changes nothing and never prints the key.
+
+```sh
+sh scripts/preflight.sh
+```
+
+Each line starts with `ok`, `note` (read it, it changes a later step) or `FIX` (do it, then run the check again). It ends with `Ready for step 5.` when there's nothing to fix.
+
 ## 5. Create the profile
 
 A profile tells Box which agent to run, which model service it may reach, and which policy it starts from. Pick the Scoped policy: the agent reaches only the hosts your packs and profile allow.
@@ -111,6 +130,14 @@ A profile tells Box which agent to run, which model service it may reach, and wh
 ```sh
 box profile create claude-api --with claude,anthropic --policy scoped
 ```
+
+If you installed Claude Code with **mise** (or another version manager), `claude` on your path is the manager's wrapper, and Box would start that instead of Claude Code (the check above says so). Name the real program:
+
+```sh
+box profile create claude-api --with claude,anthropic --policy scoped --option claude.path="$(mise which claude)"
+```
+
+The path has the version in it, so after you upgrade Claude Code, run this again with `--force` and add step 7's table back ([known gap 6](known-gaps.md#6-a-version-managers-claude-isnt-claude-code)). To change a profile that already exists, add `--force`: it writes a new `profile.toml`, so step 7's lines go too.
 
 It ends with (captured in [`captured/04-profile-create-anthropic.txt`](captured/04-profile-create-anthropic.txt)):
 
@@ -171,15 +198,31 @@ rm .env
 
 On the test machine the deny landed in the agent's table and in each tool's (git, node, npm), as [`captured/06-env-deny-resolved.txt`](captured/06-env-deny-resolved.txt) shows. A `forbid` rule in `policy.dw` would not do this: Box's docs say policy file rules decide only the box's own shell, not the agent's file tools.
 
-## 8. Run Claude Code in the box (not run yet: needs a model)
+## 8. Run Claude Code in the box (tested up to the model's answer)
 
-Load the key into this terminal only, then start the agent from the project:
+Start the agent from the project, in the terminal that holds the key (in a new terminal, run step 4's `set -a` line first):
 
 ```sh
-set -a; . ~/.config/agent-secrets/my-app.env; set +a
 cd ~/src/my-app
 box run claude-api
 ```
+
+If the box stops at once with `its first-use contents changed before the record write`, your home folder is probably on btrfs. Start it again with the box ID it printed on its `reuse` line ([known gap 5](known-gaps.md#5-a-new-box-stops-once-when-its-home-is-on-btrfs)):
+
+```sh
+box run claude-api --box-id b-…        # the ID from the reuse line
+```
+
+If it stops with `unexpected argument '--append-system-prompt-file'` and a `mise` usage line, Box started mise's wrapper: make the profile again with step 5's mise line.
+
+On the laptop, Claude Code started in the box (`box run claude-api -- --version` printed `2.1.330 (Claude Code)`). With the fake canary still in the key file, a prompt went through the route to `api.anthropic.com`, which turned the canary down:
+
+```text
+$ box run claude-api --no-banner -- -p "say hi"
+Invalid API key · Fix external API key
+```
+
+`box runs history` showed the route at work, `permit` with the rule `route_anthropic_request` ([`captured/11-claude-in-a-box-fake-key.txt`](captured/11-claude-in-a-box-fake-key.txt)). With your real key in the file, the same request gets an answer.
 
 For path B instead, point the terminal at your AWS profile, set the model in the profile as Box's getting-started page says (`ANTHROPIC_MODEL` under `[agent.env]`, the full Bedrock model ID), and run `box run claude`:
 
@@ -230,6 +273,8 @@ Box's docs note that a refusal by the operating-system sandbox (`operation not p
 ## 11. Check the project after every run
 
 The agent can't leave the box, but it can write files that run *outside* it later: git hooks, `.git/config`, `.claude/settings.json`, `package.json` scripts, `.envrc`. Box's limitations page gives the check. [`scripts/after-run-check.sh`](scripts/after-run-check.sh) runs it in order and stops before any `git` command when `.git/config` or the hooks hold something to read first (git itself would run a planted `core.fsmonitor`):
+
+Run it from this folder (if you're still in `~/src/my-app`, `cd -` brings you back):
 
 ```sh
 sh scripts/after-run-check.sh ~/src/my-app
