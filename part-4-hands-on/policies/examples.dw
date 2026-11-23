@@ -1,0 +1,56 @@
+// Four kinds of Dogwood rule, each tested with box 0.3.0 on 24 November 2026.
+// Add this file to a profile's `policies` list, beside policy.dw.
+//
+// Every rule is a `permit` or a `forbid` over (principal, action, resource).
+// In Box the principal is always the agent and the resource is fixed, so a rule
+// matches on the action, and the request's details are in `context.input`.
+// Box refuses anything no rule permits, and a `forbid` always wins over a `permit`.
+// The @description is what the agent is told when the rule refuses it.
+
+// 1. Forbid: keep .env away from the box's shell and Python.
+//    It does NOT stop the agent's own Read tool: that is what the profile's
+//    [filesystem] deny is for. See step 7.
+@id("no_env_in_shell")
+@description("Reading .env from the shell is blocked. Ask the person for the value you need.")
+forbid (principal, action == Box::Action::"fs:read", resource)
+when { context.input.path like "*/.env" };
+
+// 2. Forbid a whole kind of action: no deletes from the shell, anywhere.
+//    Box's rm raises one fs:delete per file, so this stops `rm -rf` before
+//    anything goes. It doesn't stop `git rm`: git is a tool the box starts.
+@id("no_deletes")
+@description("Deleting files is blocked in this box. Say which file should go and why.")
+forbid (principal, action == Box::Action::"fs:delete", resource);
+
+// 3. Permit with conditions: one host, GET requests only.
+//    A host needs both rules: one opens the connection, one allows each request.
+//    A route in profile.toml writes both for you; write them by hand when you
+//    need a condition a route can't state, such as the method.
+@id("example_connect")
+permit (principal, action == Box::Action::"net:connect", resource)
+when { context.input.host == "example.com" && context.input.port == 443 };
+
+@id("example_get_only")
+permit (principal, action == Box::Action::"http:request", resource)
+when { context.input.host == "example.com" && context.input.method == "GET" };
+
+// 4. A rule about what already happened: at most two successful requests to
+//    example.com in any 10 minutes. Read the temporal part from the inside out:
+//    the ::response{...} pattern matches a recorded request that returned 200,
+//    `formerly within 10m` keeps the ones from the last 10 minutes, and
+//    `count for (t: Timepoint)` counts the moments, bound by tp(t), when one
+//    happened. It counts responses, so refused requests don't count.
+@id("example_two_per_10m")
+@description("At most two requests to example.com every 10 minutes. Wait before you try again.")
+forbid (principal, action == Box::Action::"http:request", resource)
+when { context.input.host == "example.com" }
+when temporal {
+  (count for (t: Timepoint). where (
+      formerly within 10m (
+          Box::Action::"http:request"::response{
+              input.host: "example.com",
+              output.status: 200
+          } && tp(t)
+      )
+  )) >= 2
+};

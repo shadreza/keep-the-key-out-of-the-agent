@@ -1,0 +1,12 @@
+// The two rules most of Box's policy starters begin with (from Box's Scoped
+// starter, box 0.3.0). Without the first, the box's shell runs no command at all.
+
+// Let the box's shell run each command the agent gives it. Each file a command
+// touches is still its own decision.
+@id("shell_commands")
+permit (principal, action == Box::Action::"shell:exec", resource);
+
+// Let programs read and write /dev/null, which they redirect output to all the time.
+@id("dev_null")
+permit (principal, action in [Box::Action::"fs:read", Box::Action::"fs:write"], resource)
+when { context.input.path == "/dev/null" };

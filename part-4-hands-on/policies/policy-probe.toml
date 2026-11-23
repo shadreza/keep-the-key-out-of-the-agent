@@ -1,0 +1,21 @@
+# A probe for the rules in examples.dw: a plain shell in place of a coding
+# agent, so it needs no model and costs nothing. Run it with run-policy-probe.sh.
+policies = ["base.dw", "examples.dw"]
+
+[profile]
+name = "policy-probe"
+
+[project]
+access = "write"
+
+[agent]
+command = ["/bin/sh", "-c", """
+bash -c '
+cat notes.txt >/dev/null && echo "1. shell reads notes.txt: ok" || echo "1. shell reads notes.txt: refused"
+cat .env >/dev/null && echo "2. shell reads .env: ok" || echo "2. shell reads .env: refused"
+rm notes.txt && echo "3. shell deletes notes.txt: ok" || echo "3. shell deletes notes.txt: refused"
+curl -s -X POST https://example.com -o /dev/null && echo "4. POST example.com: ok" || echo "4. POST example.com: refused"
+for i in 1 2 3; do curl -s https://example.com -o /dev/null && echo "5.$i GET example.com: ok" || echo "5.$i GET example.com: refused"; done
+'
+IFS= read -r line < .env && echo "6. a program outside the box's shell reads .env: ok"
+"""]

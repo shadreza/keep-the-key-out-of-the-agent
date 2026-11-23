@@ -13,6 +13,7 @@ cd keep-the-key-out-of-the-agent/part-4-hands-on
 
 - **2026-11-23**, box 0.3.0 on Debian GNU/Linux 12 (x86_64, glibc 2.36), git 2.39.5, Claude Code 2.1.325: steps 1 to 7 and step 11. Output in [`captured/`](captured/). The box itself didn't start there ([known gap 3](known-gaps.md#3-the-box-didnt-start-on-the-test-machine)).
 - **2026-11-24**, box 0.3.0 on an Arch-based Linux laptop (x86_64, glibc 2.44), git 2.56.0: steps 1 to 7 again, and a box started with a plain shell in place of Claude Code. The shell saw a placeholder instead of the key, read the `.env` without the deny, and read nothing with it ([`captured/08-probe-on-a-laptop.txt`](captured/08-probe-on-a-laptop.txt), and [Part 3's probe](../part-3-what-strands-box-changes/README.md#try-it-with-no-model) to run it yourself). The box started only with `BOX_HOME` off the btrfs home folder ([known gap 5](known-gaps.md#5-box-wouldnt-start-with-its-home-on-btrfs)).
+- **2026-11-24**, same laptop: step 12's rules, with a shell in place of the agent ([`captured/10-policy-probe.txt`](captured/10-policy-probe.txt)).
 - **Not run yet:** Claude Code talking to a model inside a box (steps 8 to 10). Those steps come from Box's docs. If what you see differs, open an issue.
 
 Box is in preview, and v0.3.0 came out on 23 November 2026. Check the steps against Box's docs on the day you run them.
@@ -236,7 +237,123 @@ sh scripts/after-run-check.sh ~/src/my-app
 
 Tested on both machines with a clean repo (exit 0) and with a planted `pre-commit` hook and `core.fsmonitor` (it stops with `STOP: read the lines above before running git here.` and exit 2).
 
-## 12. Clean up
+## 12. Write your own rules (Dogwood)
+
+Steps 5 to 7 used rules that `box` writes for you. This step writes your own. You'll run them with a plain shell in place of Claude Code, so it needs no model and costs nothing.
+
+### Two places decide what the agent can touch
+
+Before the language, the thing that trips people up. A box has two layers ([AWS's launch post](https://aws.amazon.com/blogs/opensource/introducing-strands-box-ai-agent-sandboxes-powered-by-dogwood/) calls them containment and policy):
+
+| Layer | Set in | Decides | Example |
+| --- | --- | --- | --- |
+| Containment, the operating-system sandbox | `profile.toml`: `[project] access`, `[filesystem] deny`, `[agent.filesystem]` | What every process in the box can reach at all, the agent's own Read and Edit tools included | Step 7's `[filesystem] deny` for `.env` |
+| Policy, Dogwood rules | `policy.dw` and any `.dw` file in the profile's `policies` list | Each command the box's shell or Python runs, each file those commands touch, each network connection and HTTP request, each MCP tool call | `forbid` reading `.env` from the shell |
+
+Box's policies page puts it plainly: a rule that forbids reading `.env` stops `cat .env`, but not the agent's Read tool or `git diff`. The probe below shows that too (line 6). So keep secrets out with the profile, and use rules for what the agent *does*.
+
+### How a rule reads
+
+Dogwood uses [Cedar](https://www.cedarpolicy.com/)'s syntax. Each rule is a `permit` or a `forbid` over a principal, an action and a resource, with conditions in `when`. In Box, the principal is always the agent and the resource is fixed, so a rule matches on the action, and the details of each request are in `context.input`:
+
+```text
+@id("no_env_in_shell")                                          // its name in the run history
+@description("Reading .env from the shell is blocked. Ask the person for the value you need.")
+forbid (principal, action == Box::Action::"fs:read", resource)  // what kind of action
+when { context.input.path like "*/.env" };                      // which ones
+```
+
+Three things to know:
+
+- **Nothing is allowed unless a rule permits it** (`<default-deny>` in the history), and **a `forbid` always wins** over a `permit`. So a `forbid` in your file beats anything a pack allows.
+- **The `@description` goes to the agent.** When a rule refuses something, the agent gets the rule's `@id` and description, so write the description as an instruction: what to do instead.
+- **`like` matches with `*`**, and `*` matches any text, slashes and dots included.
+
+The actions you'll use most (Box's policy guide lists every field):
+
+| Action | Raised when | Fields in `context.input` |
+| --- | --- | --- |
+| `shell:exec` | the box's shell runs a command | `program` |
+| `shell:spawn` | the shell starts a program on your machine | `program_path` |
+| `fs:read`, `fs:write`, `fs:delete`, `fs:move` | a shell command or Python touches a file | `path` |
+| `net:connect` | anything in the box opens a connection | `host`, `port` |
+| `http:request` | anything in the box sends an HTTP request | `host`, `port`, `method`, `path` |
+
+### Rules that remember
+
+A rule can also depend on what already happened in the run, with a `when temporal` clause: a count, a cooldown or an order. This one allows two successful requests to a host in any ten minutes:
+
+```text
+@id("example_two_per_10m")
+@description("At most two requests to example.com every 10 minutes. Wait before you try again.")
+forbid (principal, action == Box::Action::"http:request", resource)
+when { context.input.host == "example.com" }
+when temporal {
+  (count for (t: Timepoint). where (
+      formerly within 10m (
+          Box::Action::"http:request"::response{
+              input.host: "example.com",
+              output.status: 200
+          } && tp(t)
+      )
+  )) >= 2
+};
+```
+
+Read the temporal part from the inside out. The `::response{...}` pattern matches a recorded request that returned 200. `formerly within 10m` keeps those from the last ten minutes. `count for (t: Timepoint)` counts the moments, bound by `tp(t)`, when one happened. It binds on the response, so refused requests don't count; bind on `::request` to count attempts instead. AWS's launch post uses the same shape to cap an on-call agent's Slack posts at three every ten minutes.
+
+### Try them
+
+[`policies/examples.dw`](policies/examples.dw) has four rules, each commented: no `.env` from the shell, no deletes, one host with GET only, and the count above. [`policies/policy-probe.toml`](policies/policy-probe.toml) runs a shell in a box with them and [`policies/base.dw`](policies/base.dw), the two rules Box's starters begin with.
+
+```sh
+sh policies/run-policy-probe.sh
+```
+
+On the laptop it printed (all of it in [`captured/10-policy-probe.txt`](captured/10-policy-probe.txt)):
+
+```text
+1. shell reads notes.txt: ok
+2. shell reads .env: refused
+3. shell deletes notes.txt: refused
+4. POST example.com: refused
+5.1 GET example.com: ok
+5.2 GET example.com: ok
+5.3 GET example.com: refused
+6. a program outside the box's shell reads .env: ok
+```
+
+Line by line: the shell reads an ordinary file (1), but not `.env` (2). No deletes (3). The POST is refused because no rule permits it, only GET (4). Two GETs go through and the third hits the count (5). And a program that isn't the box's shell, standing in for the agent's own Read tool, still reads `.env` (6): that's why step 7 keeps the file out with the profile.
+
+The refusals carry the rule's name and description, which is what the agent sees:
+
+```text
+rm: notes.txt: policy denied this operation on '~/src/my-app/notes.txt' [policy: no_deletes]: Deleting files is blocked in this box. Say which file should go and why.
+```
+
+And `box runs history <box ID> --deny` lists each one with its rule:
+
+```text
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T20:55:26Z	deny	fs:read	~/src/my-app/.env	no_env_in_shell	a forbid rule matched
+2026-11-23T20:55:26Z	deny	fs:delete	~/src/my-app/notes.txt	no_deletes	a forbid rule matched
+2026-11-23T20:55:26Z	deny	http:request	example.com:443/	<default-deny>	no permit matched
+2026-11-23T20:55:26Z	deny	http:request	example.com:443/	example_two_per_10m	a forbid rule matched
+```
+
+### Add rules to your own profile
+
+Put them in a file of their own beside `profile.toml`, and list it after `policy.dw`, so Box's copied starter stays as it was:
+
+```toml
+policies = ["policy.dw", "examples.dw"]
+```
+
+Then `box profile show claude-api --full` checks the whole policy the way `box run` does: a broken rule or a clashing `@id` fails there, before a box starts. Keep write rules narrow: a rule that lets the shell write anywhere under `~/` lets it change your other tools' settings, and Box's docs warn there's no warning when a run starts with one.
+
+To have a coding agent outside the box write rules for you, run `box help agent`; AWS also publishes a policy-authoring skill for agents. The full language guide is at <https://dogwood-policy.github.io/dogwood/>.
+
+## 13. Clean up
 
 ```sh
 box profile clean --all            # removes the run records; asks first

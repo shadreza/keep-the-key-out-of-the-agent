@@ -1,0 +1,20 @@
+1. shell reads notes.txt: ok
+2. shell reads .env: refused
+3. shell deletes notes.txt: refused
+4. POST example.com: refused
+5.1 GET example.com: ok
+5.2 GET example.com: ok
+5.3 GET example.com: refused
+6. a program outside the box's shell reads .env: ok
+
+strands-shell: cat: policy denied this operation on '~/src/my-app/.env' [policy: no_env_in_shell]: Reading .env from the shell is blocked. Ask the person for the value you need.
+rm: notes.txt: policy denied this operation on '~/src/my-app/notes.txt' [policy: no_deletes]: Deleting files is blocked in this box. Say which file should go and why.
+curl: http:request gate: policy denied this operation on 'example.com:443/' [default-deny]: No permit policy matched this request.
+curl: http:request gate: policy denied this operation on 'example.com:443/' [policy: example_two_per_10m]: At most two requests to example.com every 10 minutes. Wait before you try again.
+
+== box runs history b-7b40ecf067f1e716 --deny
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T20:55:26Z	deny	fs:read	~/src/my-app/.env	no_env_in_shell	a forbid rule matched
+2026-11-23T20:55:26Z	deny	fs:delete	~/src/my-app/notes.txt	no_deletes	a forbid rule matched
+2026-11-23T20:55:26Z	deny	http:request	example.com:443/	<default-deny>	no permit matched
+2026-11-23T20:55:26Z	deny	http:request	example.com:443/	example_two_per_10m	a forbid rule matched
