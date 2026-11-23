@@ -224,6 +224,24 @@ Invalid API key · Fix external API key
 
 `box runs history` showed the route at work, `permit` with the rule `route_anthropic_request` ([`captured/11-claude-in-a-box-fake-key.txt`](captured/11-claude-in-a-box-fake-key.txt)). With your real key in the file, the same request gets an answer.
 
+Started from the project, it looks like this. The bottom line is Box's banner: the profile, the project, and how many operations it has refused so far.
+
+![Claude Code 2.1.330 open in ~/src/my-app inside a box. The bottom line reads: box, claude-api, ~/src/my-app, 10 operations denied, with Ctrl+\\ for policy on or off and Ctrl+] to expand.](../docs/images/claude-in-box.png)
+
+The 10 refusals came before any prompt. `box runs history <box ID> --deny` listed them:
+
+```text
+6  http:request  api.anthropic.com:443/api/event_logging/v2/batch  enforcement:egress
+1  http:request  api.anthropic.com:443/api/directory/server-urls   enforcement:egress
+2  net:connect   downloads.claude.ai:443                           <default-deny>
+1  net:connect   raw.githubusercontent.com:443                     <default-deny>
+```
+
+Two kinds, both the box doing its job:
+
+- **`enforcement:egress`**: the request went to the right host but carried no placeholder key, so Box wouldn't add the real one (`refusing to attach a secret to a request that presents no placeholder`). Box adds your key only where the agent presented the placeholder. Later requests to the same address that did carry it went through.
+- **`<default-deny>`**: hosts that no pack allows. Here Claude Code's updater (`downloads.claude.ai`) and a file from GitHub. The Scoped policy keeps the agent to the hosts your packs name.
+
 For path B instead, point the terminal at your AWS profile, set the model in the profile as Box's getting-started page says (`ANTHROPIC_MODEL` under `[agent.env]`, the full Bedrock model ID), and run `box run claude`:
 
 ```sh

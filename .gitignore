@@ -7,3 +7,4 @@ install.sh
 # What a box leaves in a project folder.
 .box/
 hello.txt
+snaps/
