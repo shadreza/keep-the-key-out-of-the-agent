@@ -200,7 +200,7 @@ On the test machine the deny landed in the agent's table and in each tool's (git
 
 ## 8. Run Claude Code in the box (tested up to the model's answer)
 
-Start the agent from the project, in the terminal that holds the key (in a new terminal, run step 4's `set -a` line first):
+Start the agent from the project, in the terminal that holds the key. In a new terminal, run step 4's `set -a` line first, or `box run` stops with `credential setup failed: credential variable ANTHROPIC_API_KEY is not set`.
 
 ```sh
 cd ~/src/my-app
