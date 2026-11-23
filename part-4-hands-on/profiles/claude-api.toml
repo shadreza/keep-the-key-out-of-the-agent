@@ -16,5 +16,6 @@ claude.import-hooks = "false"
 
 # Keep a .env that is still in the project away from every process in the box.
 # optional = true lets the profile run in a project that has no .env (Linux needs it).
+# It is resolved when the box starts: a .env made during the run is not denied (known gap 8).
 [filesystem]
 deny = [{ path = "${{ workspace }}/.env", optional = true }]

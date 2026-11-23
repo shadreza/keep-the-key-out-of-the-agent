@@ -40,7 +40,8 @@ Box is in preview, and v0.3.0 came out on 23 November 2026, the day these steps 
 | Four Dogwood rules of your own (a forbid, a no-delete, GET only, a count over ten minutes), with a shell in place of the agent | The Arch-based laptop | Each refused what it should, and the run history named the rule ([`captured/10-policy-probe.txt`](part-4-hands-on/captured/10-policy-probe.txt)) |
 | `find-keys.sh`, `move-env-out.sh`, `after-run-check.sh` | Both machines, on clean and planted test repos | Ran |
 | Claude Code starting in a box, its request going through the key route | The Arch-based laptop, Claude Code 2.1.330 | Started; with a fake key, Anthropic answered `Invalid API key`, so the route reached it ([`captured/11`](part-4-hands-on/captured/11-claude-in-a-box-fake-key.txt)) |
-| Claude Code answering with a real key inside a box | Not yet | Steps 8 to 10 of Part 4 come from Box's docs until then |
+| Claude Code on a Claude subscription in a box: the stand-in token, the `.env` read without the deny, refused with it | The Arch-based laptop, Claude Code 2.1.330 | Ran, with screenshots at each step ([`captured/12`](part-4-hands-on/captured/12-subscription-and-env-runs.txt)). It also showed that an `optional` deny doesn't cover a `.env` made during the run ([known gap 8](part-4-hands-on/known-gaps.md#8-an-optional-deny-doesnt-cover-a-env-made-during-the-run)) |
+| Claude Code answering with a real API key, or through Bedrock | Not yet | Path A's route reached Anthropic with a fake key; path B is from Box's docs |
 
 If you see something different, open an issue with the command and what it printed. Known differences go in [`part-4-hands-on/known-gaps.md`](part-4-hands-on/known-gaps.md).
 

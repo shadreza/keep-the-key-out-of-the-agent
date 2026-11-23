@@ -1,6 +1,6 @@
 # Known gaps
 
-What went wrong when these steps were tested, and what to do instead. Gaps 1 to 4 are from 2026-11-23 (box 0.3.0, Debian GNU/Linux 12, x86_64), on a test machine inside a locked-down sandbox; on a normal laptop you probably won't hit 1 to 3. Gaps 5 to 7 are from 2026-11-24, on an ordinary Linux laptop. Check on yours.
+What went wrong when these steps were tested, and what to do instead. Gaps 1 to 4 are from 2026-11-23 (box 0.3.0, Debian GNU/Linux 12, x86_64), on a test machine inside a locked-down sandbox; on a normal laptop you probably won't hit 1 to 3. Gaps 5 to 8 are from 2026-11-24, on an ordinary Linux laptop. Check on yours.
 
 ## 1. The installer needs to write to `/var/tmp`
 
@@ -50,7 +50,22 @@ box: run b-6a0d4a56d9cbe382 ended
   reuse    box run claude-api --box-id b-6a0d4a56d9cbe382
 ```
 
-It happened with the default `~/.strands/box`, with a fresh short folder in the home folder, and with btrfs compression turned off for that folder. `box profile create` can hit it too, when it starts a first box. We haven't found the cause, so treat btrfs as the likely link, not a proven one.
+It happened with the default `~/.strands/box`, with a fresh short folder in the home folder, and with btrfs compression turned off for that folder. `box profile create` can hit it too, when it starts a first box.
+
+**Why.** Box's source (`crates/box/src/record/layout.rs`) opens the new box folder once and keeps the handle. It lists the folder (empty, so this is a first start), makes a `private` folder in it, and before it writes the box's first record it lists the folder again through the same handle, to check that nothing else got in. On this laptop's btrfs (kernel 7.2), a directory handle that was already listed doesn't show entries made after that first listing, even after a rewind. So the second listing comes back empty, `private` looks missing, and Box stops with "its first-use contents changed". On tmpfs the second listing shows `private`. The second `box run --box-id` opens the folder fresh, finds `private`, and carries on.
+
+[`scripts/readdir-check.py`](scripts/readdir-check.py) does those same steps in a temporary folder and says which way your file system goes:
+
+```text
+$ python3 scripts/readdir-check.py
+~/.strands/box (btrfs): listed [], made 'private', listed again []
+the new folder is missing: expect the first start of each new box to stop (known gap 5).
+$ python3 scripts/readdir-check.py /tmp
+/tmp (tmpfs): listed [], made 'private', listed again ['private']
+ok: the new folder shows. Box's first start should work here.
+```
+
+It's a file system detail meeting a careful check, not a hole in the box: the check fails closed, so nothing runs in a box Box isn't sure of.
 
 **What works: start the same box again.** The box was made; only its first start failed. Run the `reuse` line it printed:
 
@@ -97,3 +112,9 @@ strands-box: error: credential setup failed: credential variable ANTHROPIC_API_K
 ```
 
 It still wrote `profile.toml`, so the next try said `profile.toml exists; pass --force to overwrite`. What works: load the key first (step 4's `set -a` line), then make the profile with `--force`.
+
+## 8. An `optional` deny doesn't cover a `.env` made during the run
+
+Step 7's deny is `optional = true`, so a project without a `.env` still runs. Box resolves it when the box starts. On the laptop, the canary `.env` went into the project after the box had started, and Claude Code read it, though the deny was in the profile. The box's config for that run held no `.env` in its deny list ([`captured/12`](captured/12-subscription-and-env-runs.txt), run 1). In a box started after the file existed, the same read was refused (run 3).
+
+This is how Box documents it, not a bug: an `optional` deny "refuses nothing when the run starts without the path, even if the path appears later" (Box's profile reference). What to do: keep keys out of the project (step 4), start a new box when a `.env` appears, and run `scripts/after-run-check.sh` after each run.

@@ -1,0 +1,24 @@
+# Written by `box profile create claude-sub --with claude,claude-subscription --policy scoped`
+# (box 0.3.0, 2026-11-24), for Claude Code signed in with a claude.ai Pro or Max plan.
+# The box adds the token from `claude setup-token` (CLAUDE_CODE_OAUTH_TOKEN in your
+# shell) to requests to api.anthropic.com; the agent sees a stand-in.
+# The [filesystem] table is the one change this hands-on makes.
+packs = ["@box/claude", "@box/claude-subscription", "@box/cargo", "@box/git", "@box/node", "@box/npm", "@box/pnpm", "@box/yarn"]
+policies = ["policy.dw"]
+
+# How much of your project the agent reaches: "none", "read", "write".
+[project]
+access = "write"
+
+[options]
+claude.host = "anthropic"
+claude.import-mcp = "false"
+claude.import-hooks = "false"
+# Only if `claude` on your PATH is a version manager's wrapper (known gap 6):
+# claude.path = "/home/you/.local/share/mise/installs/claude/latest/claude"
+
+# Keep a .env that is in the project when the box starts away from every process in it.
+# optional = true lets the profile run in a project with no .env. It is resolved when
+# the box starts: a .env made during the run is not denied (known gap 8).
+[filesystem]
+deny = [{ path = "${{ workspace }}/.env", optional = true }]

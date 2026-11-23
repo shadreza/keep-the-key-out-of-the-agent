@@ -1,0 +1,34 @@
+# Claude Code in a box on a Claude subscription, and the .env deny, three runs
+# Arch-based Linux laptop, x86_64, box 0.3.0, Claude Code 2.1.330 (mise, claude.path set),
+# profile claude-sub (@box/claude + @box/claude-subscription, Scoped policy), 2026-11-24.
+# Default BOX_HOME on btrfs: each new box needed a second start with --box-id (known gap 5).
+
+== Run 1: [filesystem] deny in the profile, but .env made after the box started
+$ grep '^deny' $BOX_HOME/r/<box ID>/box.toml   (the agent's table)
+deny = ["~/src/my-app/.box"]
+$ box runs history <box ID> --deny
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T21:31:09Z	deny	net:connect	raw.githubusercontent.com:443	<default-deny>	no permit matched
+2026-11-23T21:31:33Z	deny	net:connect	downloads.claude.ai:443	<default-deny>	no permit matched
+2026-11-23T21:31:48Z	deny	net:connect	http-intake.logs.us5.datadoghq.com:443	<default-deny>	no permit matched
+2026-11-23T21:32:13Z	deny	shell:spawn	/usr/bin/printenv	<default-deny>	no permit matched
+
+== Run 2: [filesystem] deny commented out, .env there at start
+$ grep '^deny' $BOX_HOME/r/<box ID>/box.toml   (the agent's table)
+deny = ["~/src/my-app/.box"]
+$ box runs history <box ID> --deny
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T21:36:26Z	deny	net:connect	raw.githubusercontent.com:443	<default-deny>	no permit matched
+2026-11-23T21:36:40Z	deny	net:connect	http-intake.logs.us5.datadoghq.com:443	<default-deny>	no permit matched
+
+== Run 3: [filesystem] deny back, .env there at start
+$ grep '^deny' $BOX_HOME/r/<box ID>/box.toml   (the agent's table)
+deny = ["~/src/my-app/.env", "~/src/my-app/.box"]
+$ box runs history <box ID> --deny
+TIME (UTC)	RESULT	ACTION	RESOURCE	RULE	REASON
+2026-11-23T21:37:16Z	deny	net:connect	raw.githubusercontent.com:443	<default-deny>	no permit matched
+2026-11-23T21:37:25Z	deny	fs:read	~/src/my-app/.env	filesystem_deny_read_0	a forbid rule matched
+2026-11-23T21:37:31Z	deny	net:connect	http-intake.logs.us5.datadoghq.com:443	<default-deny>	no permit matched
+
+== The token route: box.log lines for requests that carried no stand-in
+strands-box credentials : attaching the real credential to api.anthropic.com against no placeholder token: the route sets secret.inject = "always", so the box injects without a matching placeholder

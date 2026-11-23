@@ -38,11 +38,16 @@ else
     esac
 fi
 
-# 3. The key must be in this terminal before `box profile create` and `box run`.
-if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    ok "ANTHROPIC_API_KEY is set in this terminal (not shown)"
+# 3. The credential must be in this terminal before `box profile create` and
+#    `box run`: an API key (path A) or a subscription token (path C).
+if [ -n "${ANTHROPIC_API_KEY:-}" ] && [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    note "both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN are set (not shown): the profile you run decides which one Box uses"
+elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    ok "ANTHROPIC_API_KEY is set in this terminal (not shown), for path A"
+elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    ok "CLAUDE_CODE_OAUTH_TOKEN is set in this terminal (not shown), for path C"
 else
-    fix "ANTHROPIC_API_KEY isn't set: run the set -a line that move-env-out.sh printed (step 4), in this terminal"
+    fix "no key in this terminal: run the set -a line for your key file (step 4, or step 5 path C). Path B (Bedrock) needs AWS_PROFILE instead; ignore this line then"
 fi
 
 # 4. Box's home folder. On btrfs, a new box stops with "its first-use contents
@@ -51,7 +56,14 @@ box_home=${BOX_HOME:-$HOME/.strands/box}
 dir=$box_home
 while [ ! -e "$dir" ]; do dir=$(dirname "$dir"); done
 fs=$(stat -f -c %T "$dir" 2>/dev/null || echo unknown)
-if [ "$fs" = btrfs ]; then
+here=$(cd "$(dirname "$0")" && pwd)
+if [ -d "$box_home" ] && command -v python3 >/dev/null 2>&1; then
+    if python3 -I "$here/readdir-check.py" "$box_home" >/dev/null 2>&1; then
+        ok "$box_home is on $fs, and a new box's first start should work"
+    else
+        note "$box_home is on $fs: a new box stops once. Run it again with the --box-id it prints (known gap 5)."
+    fi
+elif [ "$fs" = btrfs ]; then
     note "$box_home is on btrfs: a new box stops once. Run it again with the --box-id it prints (known gap 5)."
 else
     ok "$box_home is on $fs"
